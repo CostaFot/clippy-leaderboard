@@ -22,6 +22,7 @@ The global leaderboard for [omarchy-inappropriate-clippy](https://github.com/Cos
 - **The front page is server-rendered with no JavaScript.** The only external request is a Google Fonts stylesheet; the rest is same-origin (`/static/clippy.*`). Keep it that way.
 - **Clippy in the corner is CSS only.** One radio group is his state (`say0` silent, `sayN` a line, `slapN` a slap); labels are the clicks, and only the label for the *next* state is shown over him, so each click advances. The bubble is a label for `say0`, so clicking it shuts him up. Click = the plugin's left-click (a `quotes` line, played with that line's `anim`); the `# slap him` target beside him cycles `slapped` lines, shoves him sideways and plays `GetAttention`; idle is a slow `IdleEyeBrowRaise` loop. The order is shuffled server-side per request, which is as random as no-JS gets. Middle-click and the pointer-fling can't be detected without JS — don't add JS to get them. Don't ship the full 1.3 MB sheet.
 - **Front-page design:** a fake `systemctl --user status clippy` (failed, SIGKILL) followed by a fake `coredumpctl list`, one row per handle. Colours are Omarchy's default Tokyo Night palette; font stack prefers CaskaydiaMono, falls back to JetBrains Mono. Kill bars are √-scaled so the leader doesn't flatten the rest. Zero-kill handles show "still breathing. coward." Tagline is `# it looks like you are trying to kill me. again.`
+- **Phones (≤640px):** the same table becomes a CSS grid (`tr` is `display: contents`) so the handle column can shrink to an ellipsis and the kill bar gets its own row under the handle — bars are never hidden. Every terminal line is a `.ln` block with a hanging indent (`--hang`, default 2ch for `$ `/`# `, 13ch for systemctl's key column, 5ch on phones) so wrapped text hangs under its prefix instead of snapping to column 0. `--gutter` is the page margin and Clippy's offset; it shrinks on phones.
 - **Copy is part of the design.** The footer text and the empty-state line are deliberate; don't neutralise them. Clippy's lines are verbatim from the plugin's `quotes.json`, animation names included — a handful, not the whole book.
 
 ## Running it without a database
@@ -51,6 +52,8 @@ lb.app.run(port=5055)
 ```
 
 `board()` returns `[(rank, handle, kills, slaps)]` in canonical order; `totals()` returns `(handles, kills, slaps)` across the whole table. Both are what `/` consumes. Flask isn't installed system-wide; a throwaway venv with `flask` in it is enough for this.
+
+Chrome on Linux won't shrink a window below ~1000px, so to eyeball the phone layout add a route to the stub that iframes `/` at 390px wide — an iframe is its own viewport and the media query kicks in.
 
 Real local run: `DATABASE_URL=postgres://... python app.py`.
 

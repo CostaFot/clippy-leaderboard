@@ -185,11 +185,17 @@ PAGE = """<!doctype html>
     --bg: #1a1b26; --bg2: #1f2335; --fg: #a9b1d6; --bright: #c0caf5; --comment: #565f89;
     --red: #f7768e; --yellow: #e0af68; --green: #9ece6a; --blue: #7aa2f7; --magenta: #bb9af7;
     --mono: 'CaskaydiaMono Nerd Font', 'Cascadia Mono', 'JetBrains Mono', ui-monospace, monospace;
+    --gutter: 1.5rem;
   }
   * { box-sizing: border-box; margin: 0; }
   html { background: var(--bg); }
-  body { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--fg); background: var(--bg); max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 8rem; }
+  body { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--fg); background: var(--bg); max-width: 960px; margin: 0 auto; padding: 2.5rem var(--gutter) 8rem; }
   pre { font: inherit; white-space: pre-wrap; }
+  /* One .ln per terminal line. A line that wraps hangs under its prefix
+     ("$ ", "# ", "     Active: ") instead of snapping back to column 0. */
+  .lines { white-space: normal; }
+  .ln { display: block; white-space: pre-wrap; padding-left: var(--hang, 2ch); text-indent: calc(-1 * var(--hang, 2ch)); }
+  .ln.k { --hang: 13ch; }
   .p { color: var(--green); font-weight: 700; }
   .cmd { color: var(--bright); }
   .x { color: var(--red); font-weight: 700; }
@@ -201,7 +207,6 @@ PAGE = """<!doctype html>
   b { color: var(--bright); font-weight: 700; }
   a { color: var(--blue); }
   .block { margin-bottom: 1.4rem; }
-  .status { padding-left: 2ch; }
 
   table { border-collapse: collapse; width: 100%; }
   th { text-align: left; color: var(--comment); font-weight: 400; text-transform: uppercase; font-size: .8rem; letter-spacing: .06em; padding: 0 1ch .3rem 0; border-bottom: 1px solid #2a2f45; }
@@ -221,19 +226,33 @@ PAGE = """<!doctype html>
   tr.alive td.bar i::after { content: 'still breathing. coward.'; font-style: italic; color: var(--green); }
   .empty { color: var(--comment); font-style: italic; }
   footer { margin-top: 2.5rem; color: var(--comment); }
-  @media (max-width: 640px) { td.bar { display: none; } th:last-child { display: none; } }
+  @media (max-width: 640px) {
+    :root { --gutter: 1rem; }
+    body { font-size: 13px; padding-top: 1.25rem; }
+    .tag { display: block; margin-left: -2ch; padding-left: 2ch; }
+    .ln.k { --hang: 5ch; }  /* systemctl's key column is a luxury at this width */
+    /* Phones: the same cells laid out as a grid, so the handle column can
+       shrink (ellipsis) and the bar gets its own row under the handle
+       instead of being dropped. */
+    table { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content max-content; align-items: baseline; }
+    thead, tbody, tr { display: contents; }
+    th:last-child { display: none; }
+    td.handle { max-width: none; min-width: 0; }
+    td.bar { grid-column: 2 / -1; width: auto; padding: 0 0 .35rem; border-top: 0; }
+    td.bar i { height: .45em; margin-top: -.1rem; }
+  }
 
   /* Clippy. No JavaScript: one radio group is his state (say0 silent, sayN a
      line, slapN a slap), labels are the clicks. Only the label for the *next*
      state is shown over him, so each click advances; the bubble is a label
      for say0, so clicking it shuts him up. Keyframes come from clippy.css. */
-  .clippy { position: fixed; right: 1.5rem; bottom: 1.25rem; width: 124px; height: 93px; }
+  .clippy { position: fixed; right: var(--gutter); bottom: 1.25rem; width: 124px; height: 93px; }
   .sprite { width: 124px; height: 93px; background: url(/static/clippy.png) 0 0 no-repeat; animation: idle var(--dur-idle) step-end infinite; transition: transform .25s; }
   .hit, .slap { position: absolute; display: none; cursor: pointer; }
   .hit { inset: 0; }
   .slap { right: calc(100% + 1ch); bottom: .5rem; color: var(--comment); white-space: nowrap; }
   .slap:hover { color: var(--red); }
-  .bubble { --bb: var(--comment); display: none; position: absolute; bottom: calc(100% + 14px); right: 0; width: max-content; max-width: min(320px, calc(100vw - 3rem)); padding: .5rem .75rem; background: var(--bg2); border: 1px solid var(--bb); border-radius: 6px; color: var(--bright); cursor: pointer; }
+  .bubble { --bb: var(--comment); display: none; position: absolute; bottom: calc(100% + 14px); right: 0; width: max-content; max-width: min(320px, calc(100vw - 2 * var(--gutter))); padding: .5rem .75rem; background: var(--bg2); border: 1px solid var(--bb); border-radius: 6px; color: var(--bright); cursor: pointer; }
   .bubble::after { content: ''; position: absolute; bottom: -6px; right: 58px; width: 10px; height: 10px; background: var(--bg2); border-right: 1px solid var(--bb); border-bottom: 1px solid var(--bb); transform: rotate(45deg); }
   .bubble.slapped { --bb: var(--red); }
   /* -a/-b alternate so two lines in a row with the same animation both play. */
@@ -249,12 +268,14 @@ PAGE = """<!doctype html>
 </style>
 </head>
 <body>
-<pre class="block"><span class="p">$</span> <span class="cmd">systemctl --user status clippy</span>
-<span class="x">×</span> <b>clippy.service</b> - Inappropriate Clippy
-     Active: <span class="fail">failed</span> (Result: SIGKILL) — <span class="num">{{ total_kills }}</span> deaths on <span class="num">{{ n }}</span> machines, <span class="num">{{ total_slaps }}</span> slaps{% if leader and leader.kills > 0 %}
-  Killed by: <b>{{ leader.handle }}</b>, <span class="num">{{ leader.kills }}</span> times and counting{% endif %}</pre>
+<pre class="block lines">
+<span class="ln"><span class="p">$</span> <span class="cmd">systemctl --user status clippy</span></span>
+<span class="ln"><span class="x">×</span> <b>clippy.service</b> - Inappropriate Clippy</span>
+<span class="ln k">     Active: <span class="fail">failed</span> (Result: SIGKILL) — <span class="num">{{ total_kills }}</span> deaths on <span class="num">{{ n }}</span> machines, <span class="num">{{ total_slaps }}</span> slaps</span>
+{% if leader and leader.kills > 0 %}<span class="ln k">  Killed by: <b>{{ leader.handle }}</b>, <span class="num">{{ leader.kills }}</span> times and counting</span>{% endif %}
+</pre>
 
-<pre><span class="p">$</span> <span class="cmd">coredumpctl list clippy --group-by=killer</span>   <span class="c tag"># it looks like you are trying to kill me. again.</span></pre>
+<pre class="lines"><span class="ln"><span class="p">$</span> <span class="cmd">coredumpctl list clippy --group-by=killer</span>   <span class="c tag"># it looks like you are trying to kill me. again.</span></span></pre>
 {% if rows %}
 <table>
   <thead><tr><th>rank</th><th>handle</th><th class="r">kills</th><th class="r">slaps</th><th></th></tr></thead>
@@ -270,15 +291,17 @@ PAGE = """<!doctype html>
   {% endfor %}
   </tbody>
 </table>
-{% if overflow %}<pre class="c">… and {{ overflow }} more, rotting quietly. <span class="c">(--limit 100)</span></pre>{% endif %}
+{% if overflow %}<pre class="c lines"><span class="ln">… and {{ overflow }} more, rotting quietly. (--limit 100)</span></pre>{% endif %}
 {% else %}
-<pre class="empty">-- No coredumps found. Nobody has died yet. Disgraceful. Be the first.</pre>
+<pre class="empty lines"><span class="ln" style="--hang: 3ch">-- No coredumps found. Nobody has died yet. Disgraceful. Be the first.</span></pre>
 {% endif %}
 <footer>
-<pre><span class="p">$</span> <span class="cmd">omarchy-shell costafot.clippy set leaderboard &lt;yourname&gt;</span>   <span class="c"># join the board</span>
-<span class="c"># Every row is self-reported murder from <a href="https://github.com/CostaFot/omarchy-inappropriate-clippy">omarchy-inappropriate-clippy</a>.
-# Opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.
-# Cheating is possible, easy, and beneath nobody.</span></pre>
+<pre class="lines">
+<span class="ln"><span class="p">$</span> <span class="cmd">omarchy-shell costafot.clippy set leaderboard &lt;yourname&gt;</span>   <span class="c"># join the board</span></span>
+<span class="ln c"># Every row is self-reported murder from <a href="https://github.com/CostaFot/omarchy-inappropriate-clippy">omarchy-inappropriate-clippy</a>.</span>
+<span class="ln c"># Opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.</span>
+<span class="ln c"># Cheating is possible, easy, and beneath nobody.</span>
+</pre>
 </footer>
 
 <div class="clippy">
