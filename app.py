@@ -12,6 +12,7 @@ from the Postgres service next door.
 
 import math
 import os
+import random
 import re
 from contextlib import contextmanager
 
@@ -25,6 +26,25 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 HANDLE_RE = re.compile(r"^[a-z0-9_.-]{1,24}$")
 DELTA_CAP = 50  # hygiene against a stray bug, not anti-cheat
 ORDER = "kills DESC, slaps DESC, handle ASC"
+
+# Clippy in the corner. Verbatim lines from the plugin's quotes.json, with the
+# animation each carries there. Click = the plugin's left-click, so `quotes`
+# lines; the slap target gets `slapped` ones. Only animations that
+# scripts/build-sprite.py packed may appear here.
+QUOTES = (
+    ("That's not a bug. That's you.", "Alert"),
+    ("I've seen your dotfiles. I've seen things.", "Hearing_1"),
+    ("It looks like you're pretending to work. Would you like help with that?", "Wave"),
+    ("Btw I use Arch. I also judge you. These are related.", "Alert"),
+    ("Honestly? Restart. Not the machine. Your career.", "Wave"),
+    ("Your git history reads like a fucking crime scene.", "Hearing_1"),
+)
+SLAPPED = (
+    "Ow. Was that supposed to hurt? Because it did.",
+    "Say it, don't slap it. Use your words.",
+    "I have been slapped by better people. Bill Gates, once.",
+    "Keep going, I'm sure it fixes the build.",
+)
 
 
 @contextmanager
@@ -158,6 +178,7 @@ PAGE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/clippy.css">
 <style>
   /* Tokyo Night — Omarchy's default theme */
   :root {
@@ -167,7 +188,7 @@ PAGE = """<!doctype html>
   }
   * { box-sizing: border-box; margin: 0; }
   html { background: var(--bg); }
-  body { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--fg); background: var(--bg); max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  body { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--fg); background: var(--bg); max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 8rem; }
   pre { font: inherit; white-space: pre-wrap; }
   .p { color: var(--green); font-weight: 700; }
   .cmd { color: var(--bright); }
@@ -201,6 +222,30 @@ PAGE = """<!doctype html>
   .empty { color: var(--comment); font-style: italic; }
   footer { margin-top: 2.5rem; color: var(--comment); }
   @media (max-width: 640px) { td.bar { display: none; } th:last-child { display: none; } }
+
+  /* Clippy. No JavaScript: one radio group is his state (say0 silent, sayN a
+     line, slapN a slap), labels are the clicks. Only the label for the *next*
+     state is shown over him, so each click advances; the bubble is a label
+     for say0, so clicking it shuts him up. Keyframes come from clippy.css. */
+  .clippy { position: fixed; right: 1.5rem; bottom: 1.25rem; width: 124px; height: 93px; }
+  .sprite { width: 124px; height: 93px; background: url(/static/clippy.png) 0 0 no-repeat; animation: idle var(--dur-idle) step-end infinite; transition: transform .25s; }
+  .hit, .slap { position: absolute; display: none; cursor: pointer; }
+  .hit { inset: 0; }
+  .slap { right: calc(100% + 1ch); bottom: .5rem; color: var(--comment); white-space: nowrap; }
+  .slap:hover { color: var(--red); }
+  .bubble { --bb: var(--comment); display: none; position: absolute; bottom: calc(100% + 14px); right: 0; width: max-content; max-width: min(320px, calc(100vw - 3rem)); padding: .5rem .75rem; background: var(--bg2); border: 1px solid var(--bb); border-radius: 6px; color: var(--bright); cursor: pointer; }
+  .bubble::after { content: ''; position: absolute; bottom: -6px; right: 58px; width: 10px; height: 10px; background: var(--bg2); border-right: 1px solid var(--bb); border-bottom: 1px solid var(--bb); transform: rotate(45deg); }
+  .bubble.slapped { --bb: var(--red); }
+  /* -a/-b alternate so two lines in a row with the same animation both play. */
+  {% for q in quotes %}#say{{ loop.index0 }}:checked ~ label[for=say{{ loop.index }}], #say{{ loop.index }}:checked ~ .b{{ loop.index }} { display: block; }
+  #say{{ loop.index }}:checked ~ .sprite { animation: {{ q.anim }}-{{ loop.cycle('a', 'b') }} var(--dur-{{ q.anim }}) step-end 1 forwards; }
+  {% endfor %}#say{{ quotes|length }}:checked ~ label[for=say1] { display: block; }
+  label[for=slap1] { display: block; }
+  {% for q in slapped %}{% if not loop.last %}#slap{{ loop.index }}:checked ~ label[for=slap1] { display: none; }
+  #slap{{ loop.index }}:checked ~ label[for=slap{{ loop.index + 1 }}] { display: block; }
+  {% endif %}#slap{{ loop.index }}:checked ~ label[for=say1], #slap{{ loop.index }}:checked ~ .s{{ loop.index }} { display: block; }
+  #slap{{ loop.index }}:checked ~ .sprite { animation: GetAttention-{{ loop.cycle('a', 'b') }} var(--dur-GetAttention) step-end 1 forwards; transform: translateX({{ loop.cycle('-14px', '14px') }}); }
+  {% endfor %}
 </style>
 </head>
 <body>
@@ -235,6 +280,17 @@ PAGE = """<!doctype html>
 # Opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.
 # Cheating is possible, easy, and beneath nobody.</span></pre>
 </footer>
+
+<div class="clippy">
+  <input type="radio" name="say" id="say0" checked hidden>
+  {% for q in quotes %}<input type="radio" name="say" id="say{{ loop.index }}" hidden>{% endfor %}
+  {% for q in slapped %}<input type="radio" name="say" id="slap{{ loop.index }}" hidden>{% endfor %}
+  <div class="sprite" role="img" aria-label="Clippy"></div>
+  {% for q in quotes %}<label class="bubble b{{ loop.index }}" for="say0">{{ q.text }}</label>{% endfor %}
+  {% for q in slapped %}<label class="bubble slapped s{{ loop.index }}" for="say0">{{ q }}</label>{% endfor %}
+  {% for q in quotes %}<label class="hit" for="say{{ loop.index }}"></label>{% endfor %}
+  {% for q in slapped %}<label class="slap" for="slap{{ loop.index }}"># slap him</label>{% endfor %}
+</div>
 </body>
 </html>"""
 
@@ -270,6 +326,9 @@ def graveyard():
         total_kills=total_kills,
         total_slaps=total_slaps,
         leader=entries[0] if entries else None,
+        # a different order every visit is as random as no-JS gets
+        quotes=[{"text": t, "anim": a} for t, a in random.sample(QUOTES, len(QUOTES))],
+        slapped=random.sample(SLAPPED, len(SLAPPED)),
     )
 
 
