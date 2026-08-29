@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Pack the Clippy frames the graveyard page uses out of clippy.js's sheet.
 
-Dev-time only; the results (static/clippy.png, static/clippy.css) are
-committed. Reads map.png + agent.json from the omarchy-inappropriate-clippy
+Dev-time only; the results (static/clippy.png, static/clippy.css,
+static/favicon.ico) are committed. Reads map.png + agent.json from the omarchy-inappropriate-clippy
 checkout (those come from clippy.js; Microsoft's artwork), keeps only the
 cells that ANIMS touch, tiles them COLS wide, and writes one @keyframes per
 animation that steps background-position through the straight frame path
@@ -70,6 +70,17 @@ def main():
         )
     subprocess.run(["magick", str(out / "clippy.png"), "-strip", str(out / "clippy.png")], check=True)
 
+    # Favicon: cell 0 (the rest pose) trimmed to its bounding box, squared on
+    # a transparent canvas, as one .ico holding 48, 32 and 16 px.
+    subprocess.run(
+        [
+            "magick", str(out / "clippy.png"), "-crop", f"{W}x{H}+0+0", "+repage", "-trim", "+repage",
+            "-background", "none", "-gravity", "center", "-extent", "%[fx:max(w,h)]x%[fx:max(w,h)]",
+            "-define", "icon:auto-resize=48,32,16", str(out / "favicon.ico"),
+        ],
+        check=True,
+    )
+
     def pos(cell):
         return f"{-(cell % COLS) * W}px {-(cell // COLS) * H}px"
 
@@ -107,7 +118,7 @@ def main():
     (out / "clippy.css").write_text("\n".join(lines) + "\n")
 
     rows = -(-len(cells) // COLS)
-    print(f"{len(cells)} cells -> static/clippy.png ({COLS}x{rows}, {(out / 'clippy.png').stat().st_size // 1024} KB), static/clippy.css")
+    print(f"{len(cells)} cells -> static/clippy.png ({COLS}x{rows}, {(out / 'clippy.png').stat().st_size // 1024} KB), static/clippy.css, static/favicon.ico")
     for n, ms in durs.items():
         print(f"  {n}: {ms} ms")
 

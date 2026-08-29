@@ -149,6 +149,12 @@ def bump():
     return jsonify({"handle": handle, "kills": kills_t, "slaps": slaps_t, "rank": rank, "total": total})
 
 
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers probe this path on their own (the API URLs open in tabs too).
+    return app.send_static_file("favicon.ico")
+
+
 @app.route("/api/scores")
 def api_scores():
     try:
@@ -174,6 +180,7 @@ PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/static/favicon.ico">
 <title>The Clippy Graveyard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
