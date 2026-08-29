@@ -1,7 +1,8 @@
 """The Clippy Graveyard — a global leaderboard for omarchy-inappropriate-clippy.
 
 Installs POST their kill/slap deltas here (opt-in, a handle the user picked);
-the front page renders one headstone per handle, sized by kills. No cookies,
+the front page renders the board as a fake `coredumpctl list`, one row per
+handle with a kill bar, under a failed `systemctl status clippy`. No cookies,
 no accounts, no anti-cheat: handles are first-come, never-owned, collisions
 merge, and every score was self-reported murder to begin with.
 
@@ -154,138 +155,122 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Clippy Graveyard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
+  /* Tokyo Night — Omarchy's default theme */
   :root {
-    --ground: #12100e;
-    --sky: #1a1d24;
-    --stone: #6b7280;
-    --stone-face: #7d8694;
-    --etch: #23272e;
-    --moss: #3f4b3a;
-    --text: #c7cdd6;
-    --dim: #6f7683;
-    --accent: #d4a017;
+    --bg: #1a1b26; --bg2: #1f2335; --fg: #a9b1d6; --bright: #c0caf5; --comment: #565f89;
+    --red: #f7768e; --yellow: #e0af68; --green: #9ece6a; --blue: #7aa2f7; --magenta: #bb9af7;
+    --mono: 'CaskaydiaMono Nerd Font', 'Cascadia Mono', 'JetBrains Mono', ui-monospace, monospace;
   }
   * { box-sizing: border-box; margin: 0; }
-  body {
-    background: linear-gradient(var(--sky) 0%, #14161b 70%, var(--ground) 70.2%);
-    color: var(--text);
-    font-family: Georgia, 'Times New Roman', serif;
-    min-height: 100vh;
-    padding: 3rem 1.5rem 4rem;
-  }
-  header { text-align: center; margin-bottom: 3rem; }
-  h1 { font-size: 2.4rem; letter-spacing: 0.06em; color: #e8eaee; }
-  .subtitle { color: var(--dim); font-style: italic; margin-top: 0.5rem; }
-  .yard {
-    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center;
-    gap: 2.2rem 1.6rem; max-width: 1100px; margin: 0 auto;
-  }
-  .grave { text-align: center; }
-  .stone {
-    position: relative;
-    width: calc(120px * var(--s));
-    padding: calc(18px * var(--s)) 10px calc(12px * var(--s));
-    background: linear-gradient(160deg, var(--stone-face), var(--stone) 60%, #565e6a);
-    border-radius: calc(60px * var(--s)) calc(60px * var(--s)) 4px 4px;
-    box-shadow: inset 0 2px 0 rgba(255,255,255,0.12), 0 6px 12px rgba(0,0,0,0.55);
-    margin: 0 auto;
-  }
-  .stone .clip { font-size: calc(1.1rem * var(--s)); color: var(--etch); }
-  .stone .handle {
-    font-size: calc(0.95rem * var(--s)); color: var(--etch); font-weight: bold;
-    letter-spacing: 0.04em; word-break: break-all; text-shadow: 0 1px 0 rgba(255,255,255,0.15);
-  }
-  .stone .kills { font-size: calc(1.7rem * var(--s)); color: var(--etch); font-weight: bold; }
-  .stone .klabel { font-size: calc(0.6rem * var(--s)); color: var(--etch); letter-spacing: 0.12em; text-transform: uppercase; }
-  .stone .rank {
-    position: absolute; top: calc(-10px * var(--s)); right: -8px;
-    background: var(--accent); color: #1d1405; font-size: 0.72rem; font-weight: bold;
-    padding: 2px 7px; border-radius: 9px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    font-family: system-ui, sans-serif;
-  }
-  .mound {
-    width: calc(150px * var(--s)); height: calc(16px * var(--s));
-    background: radial-gradient(ellipse at 50% 0%, #2a2620, var(--ground) 75%);
-    border-radius: 50% 50% 0 0; margin: -2px auto 0;
-  }
-  .slaps { color: var(--dim); font-size: 0.75rem; margin-top: 0.45rem; font-family: system-ui, sans-serif; }
-  .breathing { color: var(--moss); font-size: 0.7rem; font-style: italic; }
-  .empty { text-align: center; color: var(--dim); font-size: 1.2rem; margin: 5rem 0; font-style: italic; }
-  .more { text-align: center; color: var(--dim); font-style: italic; margin-top: 3rem; }
-  footer {
-    max-width: 640px; margin: 5rem auto 0; text-align: center;
-    color: var(--dim); font-size: 0.85rem; line-height: 1.7;
-    border-top: 1px solid #262a31; padding-top: 1.5rem;
-  }
-  footer code {
-    font-family: ui-monospace, monospace; font-size: 0.8rem;
-    background: #20242b; padding: 2px 6px; border-radius: 4px; color: var(--text);
-  }
-  footer a { color: var(--accent); }
+  html { background: var(--bg); }
+  body { font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--fg); background: var(--bg); max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  pre { font: inherit; white-space: pre-wrap; }
+  .p { color: var(--green); font-weight: 700; }
+  .cmd { color: var(--bright); }
+  .x { color: var(--red); font-weight: 700; }
+  .fail { color: var(--red); }
+  .ok { color: var(--green); }
+  .num { color: var(--yellow); }
+  .c { color: var(--comment); }
+  .tag { display: inline-block; }  /* wraps as a whole line, never mid-sentence */
+  b { color: var(--bright); font-weight: 700; }
+  a { color: var(--blue); }
+  .block { margin-bottom: 1.4rem; }
+  .status { padding-left: 2ch; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; color: var(--comment); font-weight: 400; text-transform: uppercase; font-size: .8rem; letter-spacing: .06em; padding: 0 1ch .3rem 0; border-bottom: 1px solid #2a2f45; }
+  td { padding: .22rem 1ch .22rem 0; vertical-align: baseline; white-space: nowrap; }
+  tr + tr td { border-top: 1px solid #22263a; }
+  td.r { text-align: right; }
+  td.rank { color: var(--comment); width: 5ch; }
+  td.handle { color: var(--bright); max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
+  td.kills { color: var(--red); font-weight: 700; }
+  td.slaps { color: var(--yellow); }
+  td.bar { width: 100%; }
+  td.bar i { display: block; height: .8em; width: calc(100% * var(--w)); background: linear-gradient(90deg, var(--red), #c25567); border-radius: 1px; min-width: 2px; }
+  tr.top td.rank { color: var(--red); font-weight: 700; }
+  tr.top td.handle::before { content: '★ '; color: var(--yellow); }
+  tr.alive td { color: var(--comment); }
+  tr.alive td.bar i { width: auto; background: none; height: auto; }
+  tr.alive td.bar i::after { content: 'still breathing. coward.'; font-style: italic; color: var(--green); }
+  .empty { color: var(--comment); font-style: italic; }
+  footer { margin-top: 2.5rem; color: var(--comment); }
+  @media (max-width: 640px) { td.bar { display: none; } th:last-child { display: none; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>&#9879; The Clippy Graveyard</h1>
-  <p class="subtitle">It looks like you're trying to bury me. Again.</p>
-</header>
+<pre class="block"><span class="p">$</span> <span class="cmd">systemctl --user status clippy</span>
+<span class="x">×</span> <b>clippy.service</b> - Inappropriate Clippy
+     Active: <span class="fail">failed</span> (Result: SIGKILL) — <span class="num">{{ total_kills }}</span> deaths on <span class="num">{{ n }}</span> machines, <span class="num">{{ total_slaps }}</span> slaps{% if leader and leader.kills > 0 %}
+  Killed by: <b>{{ leader.handle }}</b>, <span class="num">{{ leader.kills }}</span> times and counting{% endif %}</pre>
+
+<pre><span class="p">$</span> <span class="cmd">coredumpctl list clippy --group-by=killer</span>   <span class="c tag"># it looks like you are trying to kill me. again.</span></pre>
 {% if rows %}
-<div class="yard">
+<table>
+  <thead><tr><th>rank</th><th>handle</th><th class="r">kills</th><th class="r">slaps</th><th></th></tr></thead>
+  <tbody>
   {% for r in rows %}
-  <div class="grave" style="--s: {{ '%.3f'|format(r.scale) }}">
-    <div class="stone">
-      {% if r.rank <= 3 and r.kills > 0 %}<span class="rank">#{{ r.rank }}</span>{% endif %}
-      <div class="clip">&#128206;</div>
-      <div class="handle">{{ r.handle }}</div>
-      <div class="kills">{{ r.kills }}</div>
-      <div class="klabel">kill{{ '' if r.kills == 1 else 's' }}</div>
-    </div>
-    <div class="mound"></div>
-    {% if r.kills == 0 %}
-    <div class="breathing">still breathing. coward.</div>
-    {% else %}
-    <div class="slaps">{{ r.slaps }} slap{{ '' if r.slaps == 1 else 's' }}</div>
-    {% endif %}
-  </div>
+  <tr class="{% if r.rank <= 3 and r.kills > 0 %}top{% elif r.kills == 0 %}alive{% endif %}">
+    <td class="rank r">{{ r.rank }}</td>
+    <td class="handle">{{ r.handle }}</td>
+    <td class="kills r">{{ r.kills }}</td>
+    <td class="slaps r">{{ r.slaps }}</td>
+    <td class="bar"><i style="--w: {{ '%.3f'|format(r.bar) }}"></i></td>
+  </tr>
   {% endfor %}
-</div>
-{% if overflow %}<p class="more">&hellip;and {{ overflow }} more, rotting quietly.</p>{% endif %}
+  </tbody>
+</table>
+{% if overflow %}<pre class="c">… and {{ overflow }} more, rotting quietly. <span class="c">(--limit 100)</span></pre>{% endif %}
 {% else %}
-<p class="empty">Nobody has died yet. Disgraceful. Be the first.</p>
+<pre class="empty">-- No coredumps found. Nobody has died yet. Disgraceful. Be the first.</pre>
 {% endif %}
 <footer>
-  <p>Every grave here is self-reported murder from
-  <a href="https://github.com/CostaFot/omarchy-inappropriate-clippy">omarchy-inappropriate-clippy</a>.
-  Join with <code>omarchy-shell costafot.clippy set leaderboard &lt;yourname&gt;</code> &mdash;
-  opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.
-  Cheating is possible, easy, and beneath nobody.</p>
+<pre><span class="p">$</span> <span class="cmd">omarchy-shell costafot.clippy set leaderboard &lt;yourname&gt;</span>   <span class="c"># join the board</span>
+<span class="c"># Every row is self-reported murder from <a href="https://github.com/CostaFot/omarchy-inappropriate-clippy">omarchy-inappropriate-clippy</a>.
+# Opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.
+# Cheating is possible, easy, and beneath nobody.</span></pre>
 </footer>
 </body>
 </html>"""
 
 
+def totals():
+    """(handles, kills, slaps) across the whole table."""
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*), COALESCE(SUM(kills), 0), COALESCE(SUM(slaps), 0) FROM scores")
+        return cur.fetchone()
+
+
 @app.route("/")
 def graveyard():
-    rows = board(101)
-    overflow = 0
-    if len(rows) > 100:
-        rows = rows[:100]
-        with db() as conn, conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM scores")
-            overflow = cur.fetchone()[0] - 100
+    rows = board(100)
+    n, total_kills, total_slaps = totals()
     max_kills = max([k for _, _, k, _ in rows], default=0) or 1
-    graves = [
+    entries = [
         {
             "rank": r,
             "handle": h,
             "kills": k,
             "slaps": s,
-            "scale": 0.55 + 0.45 * math.sqrt(k) / math.sqrt(max_kills),
+            # sqrt so the leader doesn't flatten everyone else's bar
+            "bar": math.sqrt(k) / math.sqrt(max_kills),
         }
         for r, h, k, s in rows
     ]
-    return render_template_string(PAGE, rows=graves, overflow=overflow)
+    return render_template_string(
+        PAGE,
+        rows=entries,
+        overflow=max(0, n - len(rows)),
+        n=n,
+        total_kills=total_kills,
+        total_slaps=total_slaps,
+        leader=entries[0] if entries else None,
+    )
 
 
 if __name__ == "__main__":
