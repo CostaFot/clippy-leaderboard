@@ -299,7 +299,7 @@ PAGE = """<!doctype html>
 <pre class="lines">
 <span class="ln"><span class="p">$</span> <span class="cmd">omarchy-shell costafot.clippy set leaderboard &lt;yourname&gt;</span>   <span class="c"># join the board</span></span>
 <span class="ln c"># Every row is self-reported murder from <a href="https://github.com/CostaFot/omarchy-inappropriate-clippy">omarchy-inappropriate-clippy</a>.</span>
-<span class="ln c"># Opt-in, no cookies, no accounts. Handles are first-come, never-owned; collisions merge.</span>
+<span class="ln c"># Handles are first-come, never-owned; collisions merge.</span>
 <span class="ln c"># Cheating is possible, easy, and beneath nobody.</span>
 </pre>
 </footer>
