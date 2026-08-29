@@ -1,0 +1,25 @@
+# clippy-leaderboard
+
+The global leaderboard for [omarchy-inappropriate-clippy](https://github.com/CostaFot/omarchy-inappropriate-clippy). Installs post their kill/slap tallies here, and the front page renders them as a graveyard — one headstone per handle, sized by kills.
+
+No cookies, no accounts. Handles are first-come, never-owned: anyone can post as anyone, collisions merge, and cheating is trivially easy over the plugin's own IPC. Every score was self-reported murder to begin with, so none of that matters.
+
+## Endpoints
+
+| Endpoint | What |
+|---|---|
+| `POST /bump` | JSON `{"handle": "costa", "kills": 1, "slaps": 3}` — **deltas**, added to the running totals. Handle must match `[a-z0-9_.-]{1,24}` (lowercased first), deltas clamp to 0–50 per request. Returns the new totals plus rank: `{"handle", "kills", "slaps", "rank", "total"}`. A zero-delta bump is legal and creates the row. |
+| `GET /` | The graveyard. Top 100 stones, no JavaScript. |
+| `GET /api/scores?limit=N` | The board as JSON, default 50, cap 500. |
+| `GET /api/score/<handle>` | One handle's totals and rank, or 404. |
+
+## Deployment
+
+Runs on Railway: Railpack detects Python + the Procfile, a Postgres service next door provides `DATABASE_URL`. The table is created on boot.
+
+## Local run
+
+```bash
+pip install -r requirements.txt
+DATABASE_URL=postgres://... python app.py
+```
