@@ -52,6 +52,31 @@ lb.app.run(port=5055)
 
 Real local run: `DATABASE_URL=postgres://... python app.py`.
 
+## Deployment (Railway)
+
+Verified against the live project on 2026-08-29. Nothing here is configured in the repo — there is no `railway.json`, `railway.toml`, `.railway/`, or Dockerfile — it all lives in the Railway dashboard.
+
+- **Pushing to `main` deploys.** The `clippy-leaderboard` service is connected to GitHub repo `CostaFot/clippy-leaderboard`, branch `main`, check suites off, no watch patterns. Every commit on `main` has become a deployment within seconds of the push; the previous deployment is `REMOVED` once the new one is `SUCCESS`. There is no staging environment. This is why the "don't push unless asked" rule below matters: a push is a production release.
+- **Build:** Railpack auto-detects Python (pip, Flask, Python 3.13) and uses the `Procfile` for the start command. No build/start command overrides, no pre-deploy command, no healthcheck. gunicorn binds `$PORT` (8080) on its own; don't add port config.
+- **Runtime:** 1 replica in `europe-west4`, restart policy `ON_FAILURE` × 10, sleep disabled.
+- **Database:** a `Postgres` service in the same project (image `ghcr.io/railwayapp-templates/postgres-ssl:18`, volume at `/var/lib/postgresql/data`). The web service's only user-set variable is `DATABASE_URL = ${{Postgres.DATABASE_URL}}`, which resolves to `postgresql://…@postgres.railway.internal:5432/railway` over the private network. Everything else in `railway variable list` is Railway-injected.
+- **URL:** `https://clippy-leaderboard-production.up.railway.app` — the Railway-generated service domain; no custom domain. The plugin hardcodes it (`leaderboardUrl` in `Clippy.qml` and the README of omarchy-inappropriate-clippy), so changing the domain means a plugin release.
+- **IDs:** project `6bfd39be-c83c-4baf-9917-011ae6bc7f8c`, environment `production` `ad4c55ab-6909-4748-a6d5-135b2dfef28c`, web service `008b5f5d-ee6f-45cf-9528-84860258c644`, Postgres service `4954e768-6784-464b-8286-2312c242aee0`. Dashboard: `https://railway.com/project/6bfd39be-c83c-4baf-9917-011ae6bc7f8c`.
+
+### Railway CLI from this directory
+
+The repo directory is linked (`railway status`), but the link's default service is **Postgres**, not the web app — always pass `--service clippy-leaderboard`.
+
+```bash
+railway deployment list --service clippy-leaderboard --json   # newest should be SUCCESS
+railway logs --service clippy-leaderboard --lines 200
+railway variable list --service clippy-leaderboard --json
+railway redeploy --service clippy-leaderboard                  # rebuild current main without a push
+curl -s https://clippy-leaderboard-production.up.railway.app/api/scores?limit=1
+```
+
+Don't `railway up`: it deploys the working tree, bypassing git. The only deploy path is a push to `main`.
+
 ## Git
 
 - Don't commit, push, or amend unless explicitly asked.
