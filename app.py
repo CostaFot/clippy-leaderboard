@@ -95,8 +95,16 @@ def score_of(handle):
         return cur.fetchone()
 
 
+UA_PREFIX = "costafot.clippy/"
+
+
 @app.route("/bump", methods=["POST"])
 def bump():
+    # Only the plugin's own User-Agent may post. Trivially spoofed (the
+    # string is right here in a public repo) -- this is a doorman, not a
+    # lock: it keeps scanners and copy-paste curls out of the table.
+    if not request.headers.get("User-Agent", "").startswith(UA_PREFIX):
+        return jsonify({"error": "you are not a paperclip"}), 403
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({"error": "JSON body required"}), 400

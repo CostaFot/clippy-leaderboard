@@ -8,7 +8,7 @@ No cookies, no accounts. Handles are first-come, never-owned: anyone can post as
 
 | Endpoint | What |
 |---|---|
-| `POST /bump` | JSON `{"handle": "costa", "kills": 1, "slaps": 3}` — **deltas**, added to the running totals. Handle must match `[a-z0-9_.-]{1,24}` (lowercased first), deltas clamp to 0–50 per request. Returns the new totals plus rank: `{"handle", "kills", "slaps", "rank", "total"}`. A zero-delta bump is legal and creates the row. |
+| `POST /bump` | Requires a `costafot.clippy/*` User-Agent (the doorman: keeps scanners out, spoofable by design). JSON `{"handle": "costa", "kills": 1, "slaps": 3}` — **deltas**, added to the running totals. Handle must match `[a-z0-9_.-]{1,24}` (lowercased first), deltas clamp to 0–50 per request. Returns the new totals plus rank: `{"handle", "kills", "slaps", "rank", "total"}`. A zero-delta bump is legal and creates the row. |
 | `GET /` | The graveyard. Top 100 stones, no JavaScript. |
 | `GET /api/scores?limit=N` | The board as JSON, default 50, cap 500. |
 | `GET /api/score/<handle>` | One handle's totals and rank, or 404. |
