@@ -186,6 +186,7 @@ PAGE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/clippy.css">
+<script defer src="https://umami-production-ed35.up.railway.app/script.js" data-website-id="2d2dae33-2141-4a7f-8b51-ee5478bc6829"></script>
 <style>
   /* Tokyo Night — Omarchy's default theme */
   :root {
