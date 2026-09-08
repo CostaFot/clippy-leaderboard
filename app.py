@@ -279,7 +279,7 @@ PAGE = """<!doctype html>
 <pre class="block lines">
 <span class="ln"><span class="p">$</span> <span class="cmd">systemctl --user status clippy</span></span>
 <span class="ln"><span class="x">×</span> <b>clippy.service</b> - Inappropriate Clippy</span>
-<span class="ln k">     Active: <span class="fail">failed</span> (Result: SIGKILL) — <span class="num">{{ total_kills }}</span> deaths on <span class="num">{{ n }}</span> machines, <span class="num">{{ total_slaps }}</span> slaps</span>
+<span class="ln k">     Active: <span class="fail">failed</span> (Result: SIGKILL) — <span class="num">{{ total_kills }}</span> deaths by <span class="num">{{ n }}</span> handles, <span class="num">{{ total_slaps }}</span> slaps</span>
 {% if leader and leader.kills > 0 %}<span class="ln k">  Killed by: <b>{{ leader.handle }}</b>, <span class="num">{{ leader.kills }}</span> times and counting</span>{% endif %}
 </pre>
 
